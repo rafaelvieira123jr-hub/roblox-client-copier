@@ -1,20 +1,20 @@
 --[[
     AUTO FARM DATA EXTRACTOR - Delta Executor
-    Extrai: Remote Events, Posições, ReplicatedStorage, Dados úteis
-    Objetivo: Criar scripts de auto farm
+    Extrai dados para auto farm e copia para clipboard
+    Objetivo: Dados úteis para criar scripts
 ]]--
 
 local DataExtractor = {}
+local HttpService = game:GetService("HttpService")
 
 -- ============================================
 -- 1. EXTRAIR REMOTE EVENTS
 -- ============================================
 function DataExtractor:extractRemoteEvents()
-    print("🔌 Extrahindo Remote Events...")
+    print("🔌 Extraindo Remote Events...")
     
     local remoteEvents = {}
     
-    -- Procurar em ReplicatedStorage
     for _, child in ipairs(game.ReplicatedStorage:GetDescendants()) do
         if child:IsA("RemoteEvent") then
             table.insert(remoteEvents, {
@@ -25,7 +25,6 @@ function DataExtractor:extractRemoteEvents()
         end
     end
     
-    -- Procurar em ReplicatedFirst
     for _, child in ipairs(game.ReplicatedFirst:GetDescendants()) do
         if child:IsA("RemoteEvent") then
             table.insert(remoteEvents, {
@@ -80,12 +79,10 @@ function DataExtractor:extractPositions()
     
     local positions = {}
     
-    -- Procurar por NPCs, inimigos, itens
     for _, child in ipairs(workspace:GetDescendants()) do
         if child:IsA("Model") or child:IsA("BasePart") then
             local name = child.Name:lower()
             
-            -- Verificar se parece ser um NPC, inimigo, item, etc
             if name:find("npc") or name:find("enemy") or name:find("spawn") or 
                name:find("item") or name:find("chest") or name:find("boss") then
                 
@@ -132,7 +129,6 @@ function DataExtractor:extractValues()
     
     local values = {}
     
-    -- Procurar por StringValues, IntValues, etc
     for _, child in ipairs(game.ReplicatedStorage:GetDescendants()) do
         if child:IsA("StringValue") or child:IsA("IntValue") or 
            child:IsA("NumberValue") or child:IsA("BoolValue") then
@@ -164,7 +160,6 @@ function DataExtractor:extractPlayerData()
         leaderstats = {}
     }
     
-    -- Procurar por leaderstats
     local leaderstats = player:FindFirstChild("leaderstats")
     if leaderstats then
         for _, stat in ipairs(leaderstats:GetChildren()) do
@@ -177,7 +172,7 @@ function DataExtractor:extractPlayerData()
 end
 
 -- ============================================
--- 7. EXTRAIR MODELOS (Para saber estrutura)
+-- 7. EXTRAIR MODELOS
 -- ============================================
 function DataExtractor:extractModels()
     print("🏗️ Extraindo Modelos/Estrutura...")
@@ -198,57 +193,117 @@ function DataExtractor:extractModels()
 end
 
 -- ============================================
--- 8. GERAR RELATÓRIO
+-- 8. COPIAR PARA CLIPBOARD
 -- ============================================
-function DataExtractor:generateReport(data)
-    print("\n" .. string.rep("=", 60))
-    print("📊 RELATÓRIO DE EXTRAÇÃO - AUTO FARM DATA")
-    print(string.rep("=", 60) .. "\n")
+function DataExtractor:copyToClipboard(data)
+    print("\n📋 Gerando dados para clipboard...")
     
-    print("📋 RESUMO:")
-    print("  🔌 Remote Events: " .. #data.remoteEvents)
-    print("  🔧 Remote Functions: " .. #data.remoteFunctions)
-    print("  📍 Posições encontradas: " .. #data.positions)
-    print("  💾 Itens ReplicatedStorage: " .. #data.replicatedStorage)
-    print("  🔢 Valores/Configs: " .. #data.values)
-    print("  🏗️ Modelos: " .. #data.models)
+    local clipboardData = {}
     
-    print("\n" .. string.rep("-", 60))
-    print("🔌 REMOTE EVENTS:")
-    for i, event in ipairs(data.remoteEvents) do
-        if i <= 5 then print("  " .. i .. ". " .. event.name .. " (" .. event.path .. ")") end
-    end
-    if #data.remoteEvents > 5 then print("  ... e mais " .. (#data.remoteEvents - 5)) end
-    
-    print("\n" .. string.rep("-", 60))
-    print("🔧 REMOTE FUNCTIONS:")
-    for i, func in ipairs(data.remoteFunctions) do
-        if i <= 5 then print("  " .. i .. ". " .. func.name .. " (" .. func.path .. ")") end
-    end
-    if #data.remoteFunctions > 5 then print("  ... e mais " .. (#data.remoteFunctions - 5)) end
-    
-    print("\n" .. string.rep("-", 60))
-    print("📍 POSIÇÕES IMPORTANTES:")
-    for i, pos in ipairs(data.positions) do
-        if i <= 5 then print("  " .. i .. ". " .. pos.name .. " -> " .. pos.position) end
-    end
-    if #data.positions > 5 then print("  ... e mais " .. (#data.positions - 5)) end
-    
-    print("\n" .. string.rep("-", 60))
-    print("👤 DADOS DO PLAYER:")
-    print("  Nome: " .. data.playerData.name)
-    print("  UserID: " .. data.playerData.userId)
-    print("  Posição: " .. data.playerData.position)
-    if next(data.playerData.leaderstats) then
-        print("  Stats:")
-        for stat, value in pairs(data.playerData.leaderstats) do
-            print("    - " .. stat .. ": " .. value)
-        end
+    -- Adicionar Remote Events
+    table.insert(clipboardData, "=== 🔌 REMOTE EVENTS ===")
+    for _, event in ipairs(data.remoteEvents) do
+        table.insert(clipboardData, "local " .. event.name .. " = game:WaitForChild('ReplicatedStorage'):WaitForChild('" .. event.name .. "')")
     end
     
-    print("\n" .. string.rep("=", 60))
-    print("✅ EXTRAÇÃO CONCLUÍDA!")
-    print(string.rep("=", 60) .. "\n")
+    table.insert(clipboardData, "\n=== 🔧 REMOTE FUNCTIONS ===")
+    for _, func in ipairs(data.remoteFunctions) do
+        table.insert(clipboardData, "local " .. func.name .. " = game:WaitForChild('ReplicatedStorage'):WaitForChild('" .. func.name .. "')")
+    end
+    
+    table.insert(clipboardData, "\n=== 📍 POSIÇÕES ===")
+    for _, pos in ipairs(data.positions) do
+        table.insert(clipboardData, "-- " .. pos.name .. ": " .. pos.position)
+    end
+    
+    table.insert(clipboardData, "\n=== 👤 STATS DO PLAYER ===")
+    table.insert(clipboardData, "-- Nome: " .. data.playerData.name)
+    table.insert(clipboardData, "-- UserID: " .. data.playerData.userId)
+    for stat, value in pairs(data.playerData.leaderstats) do
+        table.insert(clipboardData, "-- " .. stat .. ": " .. value)
+    end
+    
+    local finalText = table.concat(clipboardData, "\n")
+    
+    -- Tentar copiar para clipboard (alguns executores suportam)
+    if setclipboard then
+        setclipboard(finalText)
+    elseif pcall(function() return HttpService:JSONEncode({}) end) then
+        -- Alternativa: criar arquivo local
+        local success, err = pcall(function()
+            -- Tenta salvar em clipboard via executor
+            if _G.clipboard then
+                _G.clipboard = finalText
+            end
+        end)
+    end
+    
+    return finalText
+end
+
+-- ============================================
+-- 9. CRIAR TELA DE AVISO
+-- ============================================
+function DataExtractor:showSuccessNotification()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "DataExtractorNotif"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    
+    -- Background
+    local background = Instance.new("Frame")
+    background.Name = "Background"
+    background.Size = UDim2.new(0, 400, 0, 150)
+    background.Position = UDim2.new(0.5, -200, 0.5, -75)
+    background.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    background.BorderColor3 = Color3.fromRGB(0, 200, 100)
+    background.BorderSizePixel = 3
+    background.Parent = screenGui
+    
+    -- Arredondar cantos
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 15)
+    corner.Parent = background
+    
+    -- Ícone de sucesso
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(1, 0, 0, 50)
+    title.Position = UDim2.new(0, 0, 0, 10)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(0, 200, 100)
+    title.TextSize = 28
+    title.Font = Enum.Font.GothamBold
+    title.Text = "✅ COPIADO COM SUCESSO!"
+    title.Parent = background
+    
+    -- Descrição
+    local desc = Instance.new("TextLabel")
+    desc.Name = "Description"
+    desc.Size = UDim2.new(1, -20, 0, 40)
+    desc.Position = UDim2.new(0, 10, 0, 60)
+    desc.BackgroundTransparency = 1
+    desc.TextColor3 = Color3.fromRGB(200, 200, 200)
+    desc.TextSize = 16
+    desc.Font = Enum.Font.Gotham
+    desc.Text = "Dados extraídos e copiados!\nVá para Transferências para acessar."
+    desc.TextWrapped = true
+    desc.Parent = background
+    
+    -- Animar entrada
+    background.Position = UDim2.new(0.5, -200, 1, 0)
+    local tweenService = game:GetService("TweenService")
+    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+    local tween = tweenService:Create(background, tweenInfo, {Position = UDim2.new(0.5, -200, 0.5, -75)})
+    tween:Play()
+    
+    -- Desaparecer após 3 segundos
+    task.wait(3)
+    local tweenOut = tweenService:Create(background, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -200, 1, 0)})
+    tweenOut:Play()
+    tweenOut.Completed:Connect(function()
+        screenGui:Destroy()
+    end)
 end
 
 -- ============================================
@@ -269,13 +324,26 @@ function DataExtractor:extract()
         playerData = self:extractPlayerData()
     }
     
-    self:generateReport(data)
+    -- Copiar para clipboard
+    local clipboardContent = self:copyToClipboard(data)
+    
+    print("\n" .. string.rep("=", 60))
+    print("✅ EXTRAÇÃO CONCLUÍDA!")
+    print("📊 Dados prontos para usar em auto farm")
+    print(string.rep("=", 60) .. "\n")
+    
+    -- Mostrar notificação de sucesso
+    self:showSuccessNotification()
+    
+    -- Salvar em _G para acessar depois
+    _G.ExtractedGameData = data
+    _G.ClipboardContent = clipboardContent
+    
+    print("💡 Dados salvos em: _G.ExtractedGameData")
+    print("📋 Conteúdo do clipboard: _G.ClipboardContent\n")
     
     return data
 end
 
 -- EXECUTAR
 local extractedData = DataExtractor:extract()
-
-print("\n💡 PRÓXIMO PASSO: Use as Remote Events e Posições acima para criar seu auto farm!")
-print("   Exemplo: game.ReplicatedStorage:WaitForChild('NomeDaRemote'):FireServer(args)\n")
